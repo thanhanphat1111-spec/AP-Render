@@ -130,3 +130,10 @@ export const convertToSketchGemini = convertToSketch;
 export const generateVirtualTourImage = async (image: any, moveType: string, magnitude: number): Promise<string | null> => {
     return null;
 };
+// ==========================================
+// CÁC HÀM BỔ SUNG BỊ THIẾU KHI BUILD
+// ==========================================
+export const generateMoodboard = async (prompt: string, images: ImageFile[], count: number): Promise<AiServiceResult> => {
+    return generateImageWithReplicate(prompt, images, count);
+};
+export const generateMoodboardGemini = generateMoodboard;
