@@ -1,0 +1,50 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Enhanced Glassmorphism Theme Variables */
+  --bg-surface-1: rgba(15, 23, 42, 0.6); /* Slate 900 with opacity */
+  --bg-surface-2: rgba(30, 41, 59, 0.7); /* Slate 800 with opacity */
+  --border-1: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.5); /* Accent border on hover */
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+}
+
+body {
+  background-color: #020617;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom scrollbar - Slim and Modern */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Utility classes for consistency */
+.input-base {
+  @apply w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent focus:border-brand-accent/50 transition-all duration-200 placeholder-brand-text-muted/50;
+}
+
+.btn-primary {
+  @apply w-full bg-gradient-to-r from-brand-accent to-brand-secondary hover:brightness-110 text-white font-semibold py-2 px-4 rounded-lg shadow-lg shadow-brand-accent/20 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply w-full bg-white/5 hover:bg-white/10 border border-white/10 text-brand-text font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2;
+}

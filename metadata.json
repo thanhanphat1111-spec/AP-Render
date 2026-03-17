@@ -1,0 +1,5 @@
+{
+  "name": "An Phat Render v4",
+  "description": "An AI-powered architectural rendering application that supports exterior and interior design, floor plan to 3D conversion, and image editing. It integrates with Google AI Studio\u0027s Live API and provides a fallback to OpenAI for broader accessibility.",
+  "requestFramePermissions": []
+}
