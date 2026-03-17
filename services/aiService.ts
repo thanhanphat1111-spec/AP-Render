@@ -1,34 +1,24 @@
 import { AiServiceResult, ImageFile } from '../types';
 
-// Hàm lấy Token an toàn trên môi trường Vercel
-const getToken = () => {
-    return import.meta.env?.VITE_REPLICATE_API_TOKEN || (process && process.env && process.env.VITE_REPLICATE_API_TOKEN) || "";
-};
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ==========================================
-// HÀM LÕI GỌI REPLICATE (THAY THẾ GEMINI)
+// HÀM LÕI GỌI TRẠM TRUNG CHUYỂN VERCEL (BẢO MẬT)
 // ==========================================
 export const generateImageWithReplicate = async (prompt: string, images: ImageFile[] = [], numberOfImages: number = 1): Promise<AiServiceResult> => {
     try {
-        const token = getToken();
-        if (!token) return { error: 'Lỗi: Chưa cấu hình biến môi trường VITE_REPLICATE_API_TOKEN trên Vercel.' };
-
         let imageBase64 = undefined;
         if (images.length > 0) {
             const img = images[0];
             imageBase64 = img.base64.includes(',') ? img.base64 : `data:${img.file?.type || 'image/png'};base64,${img.base64}`;
         }
 
-        const response = await fetch("https://api.replicate.com/v1/predictions", {
+        // Gọi vào trạm trung chuyển nội bộ trên Vercel (Tuyệt đối an toàn, không bị lộ Token)
+        const response = await fetch("/api/replicate", {
             method: "POST",
-            headers: {
-                "Authorization": `Token ${token}`,
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                version: "435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2723f436dcbce190", // Model kiến trúc siêu rẻ
+                version: "435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2723f436dcbce190", 
                 input: {
                     image: imageBase64,
                     prompt: prompt,
@@ -40,22 +30,15 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
             })
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            return { error: `Lỗi kết nối API Replicate: ${errText}` };
-        }
+        if (!response.ok) return { error: `Lỗi kết nối trạm trung chuyển.` };
 
         let prediction = await response.json();
 
-        // Chờ render xong
+        // Chờ kết quả render
         while (prediction.status !== "succeeded" && prediction.status !== "failed") {
             await sleep(1500);
-            const checkRes = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
-                headers: {
-                    "Authorization": `Token ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            // Gọi GET để hỏi thăm trạng thái
+            const checkRes = await fetch(`/api/replicate?id=${prediction.id}`);
             prediction = await checkRes.json();
         }
 
@@ -64,7 +47,7 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
             const imageUrls = typeof output === 'string' ? [output] : output;
             return { imageUrls };
         } else {
-            return { error: prediction.error || 'Render thất bại trên máy chủ Replicate.' };
+            return { error: prediction.error || 'Render thất bại.' };
         }
     } catch (error: any) {
         return { error: error.message };
@@ -75,9 +58,7 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
 // CÁC HÀM XUẤT (EXPORT) ĐỂ GIỮ NGUYÊN CẤU TRÚC APP, KHÔNG BỊ LỖI BUILD VERCEL
 // ============================================================================
 
-export const generateText = async (): Promise<AiServiceResult> => {
-    return { text: "Tính năng text đang tạm tắt để tối ưu chi phí render ảnh." };
-};
+export const generateText = async (): Promise<AiServiceResult> => ({ text: "Tính năng text đang tạm tắt để tối ưu chi phí render ảnh." });
 export const generateTextGemini = generateText;
 
 export const generateImage = generateImageWithReplicate;
@@ -130,9 +111,7 @@ export const convertToSketchGemini = convertToSketch;
 export const generateVirtualTourImage = async (image: any, moveType: string, magnitude: number): Promise<string | null> => {
     return null;
 };
-// ==========================================
-// CÁC HÀM BỔ SUNG BỊ THIẾU KHI BUILD
-// ==========================================
+
 export const generateMoodboard = async (prompt: string, images: ImageFile[], count: number): Promise<AiServiceResult> => {
     return generateImageWithReplicate(prompt, images, count);
 };
