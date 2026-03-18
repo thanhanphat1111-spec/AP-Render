@@ -1,19 +1,31 @@
+// File: src/services/aiService.ts
 import { AiServiceResult, ImageFile } from '../types';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ==========================================
-// HÀM LÕI GỌI TRẠM TRUNG CHUYỂN VERCEL (BẢO MẬT)
+// HÀM LÕI GỌI TRẠM TRUNG CHUYỂN VERCEL (ĐÃ FIX LỖI MẤT ẢNH 422)
 // ==========================================
 export const generateImageWithReplicate = async (prompt: string, images: ImageFile[] = [], numberOfImages: number = 1): Promise<AiServiceResult> => {
     try {
-        let imageBase64 = undefined;
-        if (images.length > 0) {
-            const img = images[0];
-            imageBase64 = img.base64.includes(',') ? img.base64 : `data:${img.file?.type || 'image/png'};base64,${img.base64}`;
+        // 1. CHẶN LỖI 422 TỪ TRONG TRỨNG NƯỚC: Bắt buộc phải có ảnh
+        if (!images || images.length === 0 || !images[0]) {
+            return { error: "Lỗi: Bạn chưa cung cấp ảnh đầu vào (hoặc chưa khoanh vùng chọn/vẽ góc nhìn). AI Kiến trúc bắt buộc phải có ảnh gốc để làm việc!" };
         }
 
-        // Gọi vào trạm trung chuyển nội bộ trên Vercel (Tuyệt đối an toàn, không bị lộ Token)
+        const img = images[0];
+        let imageBase64 = img.base64;
+
+        // 2. Chuẩn hóa chuỗi Base64 tránh lỗi dị dạng
+        if (!imageBase64.startsWith('data:image')) {
+            const mimeType = img.file?.type || 'image/jpeg';
+            imageBase64 = imageBase64.includes('base64,') 
+                ? `data:${mimeType};${imageBase64.substring(imageBase64.indexOf('base64,'))}`
+                : `data:${mimeType};base64,${imageBase64}`;
+        }
+
+        const safePrompt = prompt && prompt.trim() !== '' ? prompt : "architectural visualization, high quality, photorealistic";
+
         const response = await fetch("/api/replicate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -21,23 +33,29 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
                 version: "435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2723f436dcbce190", 
                 input: {
                     image: imageBase64,
-                    prompt: prompt,
-                    a_prompt: "masterpiece, best quality, ultra-detailed, architectural visualization",
+                    prompt: safePrompt,
+                    a_prompt: "masterpiece, best quality, ultra-detailed",
                     n_prompt: "lowres, bad anatomy, worst quality, low quality",
-                    num_samples: numberOfImages,
+                    num_samples: Math.floor(numberOfImages),
                     image_resolution: "512"
                 }
             })
         });
 
-        if (!response.ok) return { error: `Lỗi kết nối trạm trung chuyển.` };
+        if (!response.ok) {
+            let errorDetail = await response.text();
+            try {
+                const parsed = JSON.parse(errorDetail);
+                errorDetail = JSON.stringify(parsed.detail || parsed);
+            } catch(e) {}
+            return { error: `Lỗi kết nối API: ${errorDetail}` };
+        }
 
         let prediction = await response.json();
 
         // Chờ kết quả render
         while (prediction.status !== "succeeded" && prediction.status !== "failed") {
             await sleep(1500);
-            // Gọi GET để hỏi thăm trạng thái
             const checkRes = await fetch(`/api/replicate?id=${prediction.id}`);
             prediction = await checkRes.json();
         }
@@ -47,7 +65,7 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
             const imageUrls = typeof output === 'string' ? [output] : output;
             return { imageUrls };
         } else {
-            return { error: prediction.error || 'Render thất bại.' };
+            return { error: prediction.error || 'Render thất bại từ máy chủ.' };
         }
     } catch (error: any) {
         return { error: error.message };
@@ -55,9 +73,8 @@ export const generateImageWithReplicate = async (prompt: string, images: ImageFi
 };
 
 // ============================================================================
-// CÁC HÀM XUẤT (EXPORT) ĐỂ GIỮ NGUYÊN CẤU TRÚC APP, KHÔNG BỊ LỖI BUILD VERCEL
+// CÁC HÀM XUẤT (EXPORT) GIỮ NGUYÊN
 // ============================================================================
-
 export const generateText = async (): Promise<AiServiceResult> => ({ text: "Tính năng text đang tạm tắt để tối ưu chi phí render ảnh." });
 export const generateTextGemini = generateText;
 
@@ -79,7 +96,7 @@ export const upscaleImage = async (image: ImageFile): Promise<AiServiceResult> =
 };
 export const upscaleImageGemini = upscaleImage;
 
-export const generateVideo = async (): Promise<AiServiceResult> => ({ error: "Tính năng Video chưa được kích hoạt." });
+export const generateVideo = async (): Promise<AiServiceResult> => ({ error: "Tính năng Video chưa kích hoạt." });
 export const generateVideoGemini = generateVideo;
 
 export const extendVideo = async (): Promise<AiServiceResult> => ({ error: "Tính năng nối Video chưa kích hoạt." });
