@@ -1,7 +1,7 @@
 import Replicate from "replicate";
 
-export default async function handler(req: any, res: any) {
-  // 1. Cấp quyền CORS để tránh bị trình duyệt chặn
+export default async function handler(req, res) {
+  // Cấp quyền CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -16,20 +16,17 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 2. Kiểm tra biến môi trường AN TOÀN từ bên trong hàm
     const apiKey = process.env.REPLICATE_API_TOKEN;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Chưa tìm thấy chìa khóa REPLICATE_API_TOKEN trên Vercel. Anh kiểm tra lại Settings nhé.' });
+      return res.status(500).json({ error: 'Chưa tìm thấy chìa khóa REPLICATE_API_TOKEN trên Vercel.' });
     }
 
-    // Khởi tạo Replicate
     const replicate = new Replicate({
       auth: apiKey,
     });
 
     const { action, prompt, imageBase64 } = req.body;
 
-    // 3. Xử lý các lệnh gọi
     if (action === 'generateImage') {
       const output = await replicate.run(
         "black-forest-labs/flux-schnell",
@@ -57,14 +54,14 @@ export default async function handler(req: any, res: any) {
           input: { prompt: prompt, max_tokens: 512 }
         }
       );
-      return res.status(200).json({ text: (output as string[]).join("") });
+      // Ép kiểu mảng thành chuỗi an toàn
+      return res.status(200).json({ text: Array.isArray(output) ? output.join("") : String(output) });
     }
 
     return res.status(400).json({ error: 'Hành động không được hỗ trợ' });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Lỗi máy chủ Replicate:", error);
-    // Trả về lỗi định dạng chuẩn JSON để frontend đọc được
     return res.status(500).json({ error: error.message || "Lỗi máy chủ nội bộ. Vui lòng thử lại." });
   }
 }
