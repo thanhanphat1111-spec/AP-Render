@@ -46,3 +46,9 @@ export const removeWatermark = async (): Promise<AiServiceResult> => ({ error: "
 export const changeMaterial = async (): Promise<AiServiceResult> => ({ error: "Chưa hỗ trợ." });
 export const convertToSketch = async (): Promise<AiServiceResult> => ({ error: "Chưa hỗ trợ." });
 export const generatePanorama = async (): Promise<AiServiceResult> => ({ error: "Chưa hỗ trợ." });
+// Bổ sung các type và hàm bị thiếu cho Virtual Tour Tab
+export type TourMoveType = 'left' | 'right' | 'up' | 'down' | 'zoom-in' | 'zoom-out';
+
+export const generateVirtualTourImage = async (image: ImageFile, moveType: TourMoveType): Promise<AiServiceResult> => {
+    return { error: "Tính năng Virtual Tour đang được cấu hình lại cho Replicate." };
+};
