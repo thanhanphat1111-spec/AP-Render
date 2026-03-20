@@ -12,13 +12,12 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.REPLICATE_API_TOKEN;
     if (!apiKey) {
-      return res.status(500).json({ error: 'Chưa tìm thấy chìa khóa REPLICATE_API_TOKEN.' });
+      return res.status(500).json({ error: 'Chưa tìm thấy API Token.' });
     }
 
     const replicate = new Replicate({ auth: apiKey });
     const { action, prompt, imageBase64 } = req.body;
 
-    // Chốt chặn an toàn: Đảm bảo định dạng ảnh chuẩn Data URI cho Replicate
     let finalImage = imageBase64;
     if (finalImage && !finalImage.startsWith('data:')) {
       finalImage = `data:image/jpeg;base64,${finalImage}`;
@@ -33,7 +32,6 @@ export default async function handler(req, res) {
     }
 
     if (action === 'imageToImage' || action === 'editImage') {
-      // Dùng mã Hash tuyệt đối 64 ký tự thay vì tên rút gọn để vá lỗi 404
       const output = await replicate.run(
         "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
         { input: { prompt: prompt, image: finalImage, prompt_strength: 0.7 } }
