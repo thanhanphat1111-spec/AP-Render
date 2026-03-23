@@ -34,7 +34,16 @@ export default async function handler(req, res) {
     if (action === 'imageToImage' || action === 'editImage') {
       const output = await replicate.run(
         "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-        { input: { prompt: prompt, image: finalImage, prompt_strength: 0.7 } }
+        { 
+          input: { 
+            // Đã chèn thêm bùa chú kiến trúc siêu thực và cấm vẽ kiểu mô hình/đất sét
+            prompt: prompt + ", photorealistic architectural photography, ultra realistic, highly detailed, real concrete and glass materials, beautiful lighting, 8k resolution, ray tracing", 
+            negative_prompt: "clay, 3d model, render, toy, sketch, cartoon, ugly, low quality, plastic",
+            image: finalImage, 
+            // Đã nâng lực vẽ lên 0.88 để lột xác vật liệu
+            prompt_strength: 0.88 
+          } 
+        }
       );
       return res.status(200).json({ imageUrls: output });
     }
