@@ -11,12 +11,13 @@ export default async function handler(req, res) {
 
   try {
     const apiKey = process.env.REPLICATE_API_TOKEN;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Chưa tìm thấy API Token.' });
-    }
+    if (!apiKey) return res.status(500).json({ error: 'Chưa tìm thấy API Token.' });
 
     const replicate = new Replicate({ auth: apiKey });
-    const { action, prompt, imageBase64 } = req.body;
+    
+    // Đã thêm numberOfImages vào đây để hứng dữ liệu từ giao diện
+    const { action, prompt, imageBase64, numberOfImages } = req.body;
+    const requestedCount = numberOfImages ? Math.min(numberOfImages, 4) : 1;
 
     let finalImage = imageBase64;
     if (finalImage && !finalImage.startsWith('data:')) {
@@ -26,22 +27,24 @@ export default async function handler(req, res) {
     if (action === 'generateImage') {
       const output = await replicate.run(
         "black-forest-labs/flux-schnell",
-        { input: { prompt: prompt, go_fast: true, megapixels: "1", num_outputs: 1 } }
+        // Flux chạy cực nhanh nên cho phép chạy nhiều ảnh cùng lúc
+        { input: { prompt: prompt, go_fast: true, megapixels: "1", num_outputs: requestedCount } }
       );
       return res.status(200).json({ imageUrls: output });
     }
 
     if (action === 'imageToImage' || action === 'editImage') {
+      const englishKeywords = "exterior of a modern 3-story townhouse, architecture, ";
       const output = await replicate.run(
         "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
         { 
           input: { 
-            // Đã chèn thêm bùa chú kiến trúc siêu thực và cấm vẽ kiểu mô hình/đất sét
-            prompt: prompt + ", photorealistic architectural photography, ultra realistic, highly detailed, real concrete and glass materials, beautiful lighting, 8k resolution, ray tracing", 
-            negative_prompt: "clay, 3d model, render, toy, sketch, cartoon, ugly, low quality, plastic",
+            prompt: englishKeywords + prompt + ", photorealistic, ultra realistic, highly detailed, real concrete walls, glass windows, natural daylight, 8k resolution", 
+            negative_prompt: "clay, 3d model, render, toy, sketch, cartoon, ugly, low quality, plastic, messy lines, abstract, deformed architecture, distorted",
             image: finalImage, 
-            // Đã nâng lực vẽ lên 0.88 để lột xác vật liệu
-            prompt_strength: 0.88 
+            prompt_strength: 0.75,
+            // KHÓA CỨNG: Ép SDXL chỉ xuất 1 ảnh để chống lỗi 504 Timeout của Vercel
+            num_outputs: 1 
           } 
         }
       );
@@ -60,6 +63,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("Lỗi máy chủ Replicate:", error);
-    return res.status(500).json({ error: error.message || "Lỗi máy chủ nội bộ. Vui lòng thử lại." });
+    return res.status(500).json({ error: error.message || "Lỗi máy chủ nội bộ." });
   }
 }
